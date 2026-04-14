@@ -8,6 +8,8 @@ import java.util.function.Consumer;
 import javafx.application.Platform;
 import javafx.scene.control.ListView;
 import java.util.HashMap;
+import java.io.IOException;
+import java.time.LocalDateTime;
 
 public class Server {
 	int clientsLazyGUID = 1;	
@@ -19,22 +21,26 @@ public class Server {
 		server = new ServerThread();
 		server.start();
 	}
+
+    private void Log(String str) {
+        System.out.println("[SERVER " + LocalDateTime.now() + "] " + str);
+    }
 	
 	public class ServerThread extends Thread {
 		public void run() {
 			try (ServerSocket mysocket = new ServerSocket(5555);) {
-				System.out.println("Server is waiting for a client!");
+				Log("Server is waiting for a client!");
 			
 				while (true) {
 					ClientThread c = new ClientThread(mysocket.accept(), clientsLazyGUID);
-					System.out.println("client has connected to server: " + "client #" + clientsLazyGUID);
+					Log("client has connected to server: " + "client #" + clientsLazyGUID);
 					c.start();
 
 					clientMap.put(clientsLazyGUID++, c);
 				}
 			}
 			catch(Exception e) {
-				System.out.println("Server socket did not launch");
+				Log("Server socket did not launch");
 			}
 		}
 	}
@@ -80,21 +86,11 @@ public class Server {
 		}
 
 		private void removeClient() {
-			System.out.println("Socket error from client: id=" + id + " (" + username + ") - closing down!");
+			Log("Socket error from client: id=" + id + " (" + username + ") - closing down!");
 			clientMap.remove(id);
 		}
-		
-		public void run() {
-			try {
-				in = new ObjectInputStream(connection.getInputStream());
-				out = new ObjectOutputStream(connection.getOutputStream());
-				connection.setTcpNoDelay(true);	
-			}
-			catch(Exception e) {
-				System.out.println("Streams not open");
-			}
 
-			// Log in
+        private void login() {
 			while (true) {
 				try {
 					Message message = (Message)in.readObject();
@@ -102,7 +98,7 @@ public class Server {
 
 					if (message.type == Message.MessageType.LoginRequest) {
 						if (IsValidUsername(message.body)) {
-							System.out.println(prefix + "Valid username: " + message.body);
+							Log(prefix + "Valid username: " + message.body);
 							username = message.body;
 
 							Message loginOK = new Message(username, Message.MessageType.LoginOK);
@@ -110,13 +106,13 @@ public class Server {
 
 							break;
 						}
-						System.out.println(prefix + "Invalid username! : " + message.body);
+						Log(prefix + "Invalid username! : " + message.body);
 
 						Message loginBad = new Message("", Message.MessageType.LoginFailed);
 						out.writeObject(loginBad);
 					}
 					else {
-						System.out.println("Client (id=" + id + ") did not send a login request? Ignored.");
+						Log("Client (id=" + id + ") did not send a login request? Ignored.");
 					}
 				}
 				catch(Exception e) {
@@ -125,53 +121,71 @@ public class Server {
 					return;
 				}
 			}
-			
+
 			Message joinMsg = new Message(username + " joined the server.", Message.MessageType.UserJoinedNoti);
 			joinMsg.user = username;
 			notifyClients(joinMsg);
+        }
+
+        private void handleRecvMessage() throws java.io.IOException, java.lang.ClassNotFoundException {
+            Message message = (Message)in.readObject();
+
+            String prefix = new String(username + "(id:" + id + ")");
+
+            if (message.type == Message.MessageType.GlobalTextMessage) {
+                Log(prefix + "sent: " + message.body);
+
+                Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
+                chatNotiMsg.user = username;
+                notifyClients(chatNotiMsg);
+            }
+            else if (message.type == Message.MessageType.DirectTextMessage) {
+                Log(prefix + "sent a DM to " + message.list + " : " + message.body);
+
+                Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
+                chatNotiMsg.user = username;
+                notifySomeClients(chatNotiMsg, message.list);
+            }
+            else if (message.type == Message.MessageType.GetActiveUsers) {
+                Log(prefix + " requested active users");
+                Message usersResp = new Message("", Message.MessageType.RespActiveUsers);
+
+                clientMap.forEach((id, client)->{
+                    if (client.username != null) {
+                        usersResp.list.add(client.username);
+                    }
+                });
+
+                out.writeObject(usersResp);
+            }
+            else {
+                Log("Unhandled message from client? id=" + id + "(" + username + ")");
+            }
+        }
+		
+		public void run() {
+			try {
+				in = new ObjectInputStream(connection.getInputStream());
+				out = new ObjectOutputStream(connection.getOutputStream());
+				connection.setTcpNoDelay(true);	
+			}
+			catch(Exception e) {
+				Log("Streams not open");
+			}
+
+            login();
 			
-			// Receive messages
 			while (true) {
 				try {
-					Message message = (Message)in.readObject();
-
-					String prefix = new String(username + "(id:" + id + ")");
-
-					if (message.type == Message.MessageType.GlobalTextMessage) {
-						System.out.println(prefix + "sent: " + message.body);
-
-						Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
-						chatNotiMsg.user = username;
-						notifyClients(chatNotiMsg);
-					}
-					else if (message.type == Message.MessageType.DirectTextMessage) {
-						System.out.println(prefix + "sent a DM to " + message.list + " : " + message.body);
-
-						Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
-						chatNotiMsg.user = username;
-						notifySomeClients(chatNotiMsg, message.list);
-					}
-					else if (message.type == Message.MessageType.GetActiveUsers) {
-						System.out.println(prefix + " requested active users");
-						Message usersResp = new Message("", Message.MessageType.RespActiveUsers);
-
-						clientMap.forEach((id, client)->{
-							if (client.username != null) {
-								usersResp.list.add(client.username);
-							}
-						});
-
-						out.writeObject(usersResp);
-					}
-					else {
-						System.out.println("Unhandled message from client" + id + "(" + username + ")");
-					}
+                    handleRecvMessage();
 				}
 				catch(Exception e) {
 					e.printStackTrace();
+
 					Message leaveNotiMsg = new Message(username + " has left the server!", Message.MessageType.UserLeftNoti);
 					leaveNotiMsg.user = username;
 					notifyClients(leaveNotiMsg);
+
 					removeClient();
 					return;
 				}
