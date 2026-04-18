@@ -269,22 +269,4 @@ public class GuiClient extends Application {
 		primaryStage.setTitle("Checkers");
 		primaryStage.show();
 	}
-
-	public Scene createLoginScene() {
-		t2 = new TextField();
-		t2.setPromptText("Enter a username");
-
-		b2 = new Button("Login");
-		b2.setOnAction(e->{
-			Message loginRequest = new Message(t2.getText(), Message.MessageType.LoginRequest);
-			clientConnection.send(loginRequest);
-		});
-
-		error1 = new Text("");
-
-		loginSceneBox = new VBox(10, t2, b2, error1);
-		loginSceneBox.setStyle(style);
-
-		return new Scene(loginSceneBox, 400, 300);
-	}
 }
