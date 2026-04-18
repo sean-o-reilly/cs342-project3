@@ -27,20 +27,12 @@ import javafx.scene.control.Label;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Font;
 
-
 public class GuiClient extends Application {
 
 	HashMap<String, Scene> sceneMap;
 	Client clientConnection;
 	String clientUsername;
 	String style = new String("-fx-background-color: blue;"+"-fx-font-family: 'serif';");
-
-	// messaging scene
-	TextField t1;
-	Button b1;
-	ListView<String> listItems;
-	VBox messageSceneBox;
-	ComboBox<String> cb1;
 
 	HashSet<String> usernames = new HashSet<String>();
 	ListView<String> usersList = new ListView<String>();
@@ -52,7 +44,6 @@ public class GuiClient extends Application {
 	Button b2;
 
 	//main scenes
-	/////////////////////////////////////
 	Stage primaryStage;
 	Client client;
 	Scene scene1Login, scene2Lobby, scene3Game, scene4GameEnd;
@@ -61,13 +52,10 @@ public class GuiClient extends Application {
 		launch(args);
 	}
 
-
 	private Scene createScene1Login(){
-		//Button continueButton;
 		VBox scene1v;
 		BorderPane s1bp;
 		Label title, login;
-		//TextField tf1;
 
 		title = new Label();
 		title.setText("Welcome to Checkers! Please create a username:");
@@ -89,12 +77,10 @@ public class GuiClient extends Application {
 				error1.setText("Invalid username, please enter again.");
 			}
 			else{
-				primaryStage.setScene(sceneMap.get("lobby"));
-				// Message loginRequest = new Message(t2.getText(), Message.MessageType.LoginRequest);
-				// clientConnection.send(loginRequest);
+				Message loginRequest = new Message(t2.getText(), Message.MessageType.LoginRequest);
+				clientConnection.send(loginRequest);
 			}
 		});
-
 
 		scene1v = new VBox(30, title, login, t2, b2, error1);
 		scene1v.setStyle("-fx-font-size: 15 ; -fx-font-family: Times New Roman; -fx-background-color: #87ceeb");
@@ -111,7 +97,6 @@ public class GuiClient extends Application {
 		VBox scene2v;
 		BorderPane s2bp;
 		Label rule, rule1, rule2, rule3, title;
-
 
 		rule = new Label();
 		rule.setText("Rules of the game:");
@@ -135,7 +120,6 @@ public class GuiClient extends Application {
 		title.setText("Finding your opponent...Press start to begin the game...");
 		title.setFont(Font.font("Times New Roman", 15));
 
-
 		continueButton = new Button("Start the game");
 		continueButton.setOnAction(e->{
 			primaryStage.setScene(sceneMap.get("game"));
@@ -150,7 +134,6 @@ public class GuiClient extends Application {
 		s2bp.setCenter(scene2v);
 		return new Scene(s2bp, 700, 700);	
 	}
-
 
 	private Scene createScene3Game(){
 		Button continueButton;
@@ -178,7 +161,6 @@ public class GuiClient extends Application {
 	}
 
 	private Scene createScene4GameEnd(){
-		//TO DO: add YOU WIN or YOU LOSE text
 		Button playAgain, quitButton;
 		VBox scene4v;
 		BorderPane s4bp;
@@ -209,7 +191,6 @@ public class GuiClient extends Application {
 		return new Scene(s4bp, 700, 700);
 	}
 
-	//////////////////////////////////////////////////////
 	private void updateUserList() {
 		usersList.getItems().clear();
 		usersList.getItems().addAll(usernames);
@@ -223,18 +204,15 @@ public class GuiClient extends Application {
 		);
 
 		if (message.type == Message.MessageType.ChatNoti) {
-			Platform.runLater(()->{listItems.getItems().add(message.body);});
 		}
 		else if (message.type == Message.MessageType.UserJoinedNoti) {
 			Platform.runLater(()->{
-				listItems.getItems().add(message.body);
 				usernames.add(message.user);
 				updateUserList();
 			});
 		}
 		else if (message.type == Message.MessageType.UserLeftNoti) {
 			Platform.runLater(()->{
-				listItems.getItems().add(message.body);
 				usernames.remove(message.user);
 				updateUserList();
 			});
@@ -253,7 +231,7 @@ public class GuiClient extends Application {
 		}
 		else if (message.type == Message.MessageType.LoginOK) {
 			Platform.runLater(()->{
-				primaryStage.setScene(sceneMap.get("messaging"));
+				primaryStage.setScene(sceneMap.get("lobby"));
 				clientConnection.send(new Message("", Message.MessageType.GetActiveUsers));
 				error1.setText("");
 				clientUsername = message.body;
@@ -266,17 +244,14 @@ public class GuiClient extends Application {
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
-		//clientConnection = new Client(message -> handleReceivedMessage(message, primaryStage));
 		// construct a Client with a callback, which adds data received from the server
-							
-		//clientConnection.start();
+		clientConnection = new Client(message -> handleReceivedMessage(message, primaryStage));
+		clientConnection.start();
+
 		this.primaryStage = primaryStage;
-		listItems = new ListView<String>();
 
 		sceneMap = new HashMap<String, Scene>();
 		
-		sceneMap.put("messaging",  createMessagingScene());
-		//sceneMap.put("login", createLoginScene());
 		sceneMap.put("login", createScene1Login());
 		sceneMap.put("lobby", createScene2Lobby());
 		sceneMap.put("game", createScene3Game());
@@ -291,40 +266,8 @@ public class GuiClient extends Application {
         });
 
 		primaryStage.setScene(sceneMap.get("login"));
-		//primaryStage.setTitle("Client");
 		primaryStage.setTitle("Checkers");
 		primaryStage.show();
-	}
-
-	public Scene createMessagingScene() {
-		t1 = new TextField();
-		b1 = new Button("Send to...");
-		cb1 = new ComboBox<>();
-		cb1.getItems().add("All Users");
-		cb1.getItems().add("Selected Users");
-		cb1.setValue("All Users");
-
-		usersList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-
-		b1.setOnAction(e->{
-			if (t1.getText().trim().length() > 0) {
-				if (cb1.getValue().equals("All Users")) {
-					clientConnection.send(new Message(t1.getText(), Message.MessageType.GlobalTextMessage)); 
-				}
-				else {
-					Message msg = new Message(t1.getText(), Message.MessageType.DirectTextMessage);
-					msg.list.addAll(usersList.getSelectionModel().getSelectedItems());
-					msg.list.add(clientUsername); // include self in each DM
-					clientConnection.send(msg);
-				}
-			}
-			t1.clear();
-		});
-
-		messageSceneBox = new VBox(10, t1, new HBox(b1, cb1), listItems, new Text("Users"), usersList);
-		messageSceneBox.setStyle(style);
-
-		return new Scene(messageSceneBox, 400, 300);
 	}
 
 	public Scene createLoginScene() {
