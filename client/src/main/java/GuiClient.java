@@ -172,8 +172,7 @@ public class GuiClient extends Application {
 
 		quitButton = new Button("Quit");
 		quitButton.setOnAction(e->{
-			Platform.exit();
-			System.exit(0);
+            primaryStage.setScene(sceneMap.get("lobby"));
 		});
 
 		playAgain = new Button("Play again");
