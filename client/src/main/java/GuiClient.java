@@ -199,7 +199,6 @@ public class GuiClient extends Application {
 		titleMessage.setText("Message Chat!");
 		titleMessage.setFont(Font.font("Times New Roman", FontWeight.BOLD, 20));
 	
-		
 		VBox chat = new VBox(10);
 		chat.setPadding(new Insets(10));
 
@@ -219,15 +218,12 @@ public class GuiClient extends Application {
 			clientMessage.setStyle("-fx-background-color: #add8e6; -fx-border-color: #000000; -fx-padding: 5;");
 			chat.getChildren().add(clientMessage);
 			tfInputMessage.clear();
-
 		});
 
 		sendMessage = new VBox(10, titleMessage, scroll, tfInputMessage, sendButton);
 		sendMessage.setPadding(new Insets(20));
 		sendMessage.setStyle("-fx-background-color: #add8e6; -fx-background-radius: 5; -fx-border-color: #000000; -fx-border-radius: 5");
 		sendMessage.setPrefHeight(250);
-	////////////////////////////////////////////
-
 
 		continueButton = new Button("Press when game is over.");
 		continueButton.setOnAction(e->{
@@ -237,6 +233,7 @@ public class GuiClient extends Application {
 		scene3v = new VBox(30, title, boardGrid, sendMessage, continueButton);
 		scene3v.setStyle("-fx-font-size: 15 ; -fx-font-family: Times New Roman; -fx-background-color: #87ceeb");
 		scene3v.setPadding(new Insets(25));
+
 		ScrollPane s3 = new ScrollPane();
 		s3.setContent(scene3v);
 		s3.setFitToWidth(true);
@@ -244,6 +241,7 @@ public class GuiClient extends Application {
 		s3bp.setStyle("-fx-background-color: #add8e6");
 		s3bp.setPadding(new Insets(25));
 		s3bp.setCenter(s3);
+
 		return new Scene(s3bp, 700, 700);	
 	}
 
@@ -259,7 +257,7 @@ public class GuiClient extends Application {
 
 		quitButton = new Button("Quit");
 		quitButton.setOnAction(e->{
-            primaryStage.setScene(sceneMap.get("lobby"));
+            clientConnection.send(new Message("", Message.MessageType.LeaveGameReq));
 		});
 
 		playAgain = new Button("Play again");
@@ -332,6 +330,11 @@ public class GuiClient extends Application {
         else if (message.type == Message.MessageType.JoinGameOK) {
             Platform.runLater(() -> {
                 primaryStage.setScene(sceneMap.get("game"));
+            });
+        }
+        else if (message.type == Message.MessageType.LeaveGameOK) {
+            Platform.runLater(() -> {
+                primaryStage.setScene(sceneMap.get("lobby"));
             });
         }
 		else {

@@ -22,7 +22,10 @@ public class Message implements Serializable {
         JoinGameReq,
         JoinGameOK,
         JoinGameFailed,
-        PlayerJoinedGameNoti
+        PlayerJoinedGameNoti,
+        LeaveGameReq,
+        LeaveGameOK,
+        PlayerLeftGameNoti
     }
 
     String body = "";

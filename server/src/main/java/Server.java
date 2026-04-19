@@ -103,12 +103,12 @@ public class Server {
                     clientMap.get(id).out.writeObject(message);
                 }
                 catch (Exception e) {
-                    Log("Error notifying client " + id);
+                    Log("Error notifying client " + username + " id="+ id);
                     e.printStackTrace();
                 }
             }
         }
-            
+
         // Notify players of a game
         public void notifyPlayers(Message message, CheckersGame game) {
             if (game.playerRedID != -1) {
@@ -121,32 +121,43 @@ public class Server {
 
 		private void removeClient() {
 			Log("Socket error from client: id=" + id + " (" + username + ") - closing down!");
-            synchronized(clientMap) {
-			    clientMap.remove(id);
-            }
 
             synchronized(games) {
                 CheckersGame activeGame = games.get(activeGameID);
-                handlePlayerError(activeGame);
+                if (activeGame != null) {
+                    Log("Handling leaving condition for client id=" + id);
+                    handlePlayerError(activeGame);
+                }
+            }
+
+            synchronized(clientMap) {
+			    clientMap.remove(id);
             }
 		}
+
+        private void handlePlayerLeft(CheckersGame game) {
+            if (game.hasBothPlayers()) {
+                Log("Restarting game id=" + game.gameID);
+
+                Message playerLeft = new Message(username + " left the game.", Message.MessageType.PlayerLeftGameNoti);
+                notifyPlayers(playerLeft, game);
+
+                game.restart();
+            }
+
+            if (game.playerBlackID == id) {
+                game.playerBlackID = -1;
+            }
+            else if (game.playerRedID == id) {
+                game.playerRedID = -1;
+            }
+            Log("Removed " + username + " from game id=" + game.gameID);
+        }
 
         private void handlePlayerError(CheckersGame game) {
             synchronized(games) {
                 Log(username + " was in game id=" + game.gameID + " before triggering an error.");
-
-                if (game.hasBothPlayers()) {
-                    Log("Restarting game id=" + game.gameID);
-                    game.restart();
-                }
-
-                if (game.playerBlackID == id) {
-                    game.playerBlackID = -1;
-                }
-                else if (game.playerRedID == id) {
-                    game.playerRedID = -1;
-                }
-                Log("Removed " + username + " from game id=" + game.gameID);
+                handlePlayerLeft(game);
             }
         }
 
@@ -210,91 +221,125 @@ public class Server {
             }
         }
 
+        private void handleGlobalMessage(Message message) {
+            Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
+            chatNotiMsg.user = username;
+            notifyClients(chatNotiMsg);
+        }
+
+        private void handleDM(Message message) {
+            Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
+            chatNotiMsg.user = username;
+            notifySomeClients(chatNotiMsg, message.list);
+        }
+
+        private void handleActiveUsers(Message message) throws IOException {
+            Message usersResp = new Message("", Message.MessageType.RespActiveUsers);
+
+            synchronized(clientMap) {
+                clientMap.forEach((id, client)->{
+                    if (client.username != null) {
+                        usersResp.list.add(client.username);
+                    }
+                });
+            }
+
+            out.writeObject(usersResp);
+        }
+
+        private void handleFindGame(Message message) throws IOException {
+            Log("User " + username + " requested to find a game.");
+
+            CheckersGame game = getAvailableGame();
+                
+            if (game == null) {
+                Log("Get available game failed!");
+                return;
+            }
+
+            Integer id = game.gameID;
+
+            Log("Sending " + username + " game id=" + id);
+            Message gameMsg = new Message(id.toString(), Message.MessageType.FindGameResponse);
+
+            out.writeObject(gameMsg);
+        }
+
+        private void handleJoinGame(Message message) {
+            int bodyID = Integer.parseInt(message.body);
+            Log("User " + username + " requested to join game id=" + bodyID);
+            
+            synchronized(games) {
+                if (games.containsKey(bodyID)) {
+                    CheckersGame game = games.get(bodyID);
+
+                    try {
+                        boolean joinedAsRed = game.joinGame(id);
+
+                        if (joinedAsRed) {
+                            Log(username + " joined game id=" + game.gameID + " as red.");
+                        }
+                        else {
+                            Log(username + " joined game id=" + game.gameID + " as black.");
+                        }
+
+                        activeGameID = game.gameID;
+
+                        notifyClientByID(new Message("You joined a game.", Message.MessageType.JoinGameOK), id);
+                        Message notifyPlayers = new Message(username + " joined the game.", Message.MessageType.PlayerJoinedGameNoti);
+
+                        notifyPlayers(notifyPlayers, game);
+                    }
+                    catch(Exception e) {
+                        Log(username + " tried to join full game id=" + game.gameID);
+                    }
+                }
+                else {
+                    Log("Invalid game ID request? : " + username + " " + bodyID);
+                }
+            }
+        }
+
+        private void handleLeaveGame(Message message) throws IOException {
+            if (activeGameID == -1) {
+                Log(username + " requested to leave a null game?");
+                return;
+            }
+
+            Log(username + " has requested to leave their game id=" + activeGameID);
+
+            CheckersGame game = games.get(activeGameID);
+
+            handlePlayerLeft(game);
+            activeGameID = -1;
+
+            Message resp = new Message("", Message.MessageType.LeaveGameOK);
+            out.writeObject(resp);
+        }
+
         private void handleRecvMessage() throws java.io.IOException, java.lang.ClassNotFoundException {
             Message message = (Message)in.readObject();
 
-            String prefix = new String(username + "(id:" + id + ")");
-
             if (message.type == Message.MessageType.GlobalTextMessage) {
-                Log(prefix + "sent: " + message.body);
-
-                Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
-                chatNotiMsg.user = username;
-                notifyClients(chatNotiMsg);
+                handleGlobalMessage(message);
             }
             else if (message.type == Message.MessageType.DirectTextMessage) {
-                Log(prefix + "sent a DM to " + message.list + " : " + message.body);
-
-                Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
-                chatNotiMsg.user = username;
-                notifySomeClients(chatNotiMsg, message.list);
+                handleDM(message);
             }
             else if (message.type == Message.MessageType.GetActiveUsers) {
-                Log(prefix + " requested active users");
-                Message usersResp = new Message("", Message.MessageType.RespActiveUsers);
-
-                synchronized(clientMap) {
-                    clientMap.forEach((id, client)->{
-                        if (client.username != null) {
-                            usersResp.list.add(client.username);
-                        }
-                    });
-                }
-                out.writeObject(usersResp);
+                handleActiveUsers(message);
             }
             else if (message.type == Message.MessageType.FindGameReq) {
-                Log("User " + username + " requested to find a game.");
-
-                CheckersGame game = getAvailableGame();
-                    
-                if (game == null) {
-                    Log("Get available game failed!");
-                    return;
-                }
-
-                Integer id = game.gameID;
-
-                Log("Sending " + username + " game id=" + id);
-                Message gameMsg = new Message(id.toString(), Message.MessageType.FindGameResponse);
-
-                out.writeObject(gameMsg);
+                handleFindGame(message);
             }
             else if (message.type == Message.MessageType.JoinGameReq) {
-                int bodyID = Integer.parseInt(message.body);
-                Log("User " + username + " requested to join game id=" + bodyID);
-                
-                synchronized(games) {
-                    if (games.containsKey(bodyID)) {
-                        CheckersGame game = games.get(bodyID);
-
-                        try {
-                            boolean joinedAsRed = game.joinGame(id);
-
-                            if (joinedAsRed) {
-                                Log(username + " joined game id=" + game.gameID + " as red.");
-                            }
-                            else {
-                                Log(username + " joined game id=" + game.gameID + " as black.");
-                            }
-
-                            activeGameID = game.gameID;
-
-                            notifyClientByID(new Message("You joined a game.", Message.MessageType.JoinGameOK), id);
-                            Message notifyPlayers = new Message(username + " joined the game.", Message.MessageType.PlayerJoinedGameNoti);
-
-                            notifyPlayers(notifyPlayers, game);
-                        }
-                        catch(Exception e) {
-                            Log(username + " tried to join full game id=" + game.gameID);
-                        }
-                    }
-                    else {
-                        Log("Invalid game ID request? : " + username + " " + bodyID);
-                    }
-                }
+                handleJoinGame(message);
+            }
+            else if (message.type == Message.MessageType.LeaveGameReq) {
+                handleLeaveGame(message);
             }
             else {
-                Log("Unhandled message from client? id=" + id + "(" + username + ")");
+                Log("Unhandled message from client? id=" + id + "(" + username + ") " + " type: " + message.type);
             }
         }
 		
