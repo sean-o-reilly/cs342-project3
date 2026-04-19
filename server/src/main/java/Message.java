@@ -16,7 +16,13 @@ public class Message implements Serializable {
         UserJoinedNoti,
         UserLeftNoti,
         GetActiveUsers,
-        RespActiveUsers
+        RespActiveUsers,
+        FindGameReq,
+        FindGameResponse,
+        JoinGameReq,
+        JoinGameOK,
+        JoinGameFailed,
+        PlayerJoinedGameNoti
     }
 
     String body = "";

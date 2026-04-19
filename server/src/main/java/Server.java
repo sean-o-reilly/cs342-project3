@@ -12,10 +12,13 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 
 public class Server {
-	int clientsLazyGUID = 1;	
+	int clientsLazyGUID = 1;
 	ServerThread server;
 
 	HashMap<Integer, ClientThread> clientMap = new HashMap<Integer, ClientThread>();
+
+	int gamesLazyGUID = 1;
+    HashMap<Integer, CheckersGame> games = new HashMap<Integer, CheckersGame>();
 	
 	Server() {
 		server = new ServerThread();
@@ -36,7 +39,9 @@ public class Server {
 					Log("client has connected to server: " + "client #" + clientsLazyGUID);
 					c.start();
 
-					clientMap.put(clientsLazyGUID++, c);
+                    synchronized(clientMap) {
+					    clientMap.put(clientsLazyGUID++, c);
+                    }
 				}
 			}
 			catch(Exception e) {
@@ -46,7 +51,10 @@ public class Server {
 	}
 
 	private boolean IsValidUsername(String username) {
-		boolean res = clientMap.values().stream().noneMatch(clientThread -> username.equals(clientThread.username));
+        boolean res;
+        synchronized(clientMap) {
+		    res = clientMap.values().stream().noneMatch(clientThread -> username.equals(clientThread.username));
+        }
 		return res && !username.equals("All");
 	}
 
@@ -56,6 +64,7 @@ public class Server {
 		ObjectOutputStream out;
 
 		final int id;
+        Integer activeGameID;
 		String username;
 		
 		ClientThread(Socket s, int id){
@@ -64,31 +73,82 @@ public class Server {
 		}
 		
 		public void notifyClients(Message message) {
-			clientMap.forEach((id, t)->{
-				try {
-					t.out.writeObject(message);
-				}
-				catch(Exception e) {}
-			});
+            synchronized(clientMap) {
+                clientMap.forEach((id, t)->{
+                    try {
+                        t.out.writeObject(message);
+                    }
+                    catch(Exception e) {}
+                });
+            }
 		}
 
-		// terrible time complexity but whatever
+		// Note that this function is simple but not efficient
 		public void notifySomeClients(Message message, ArrayList<String> clients) {
-			clientMap.forEach((id, t)->{
-				if (clients.contains(t.username)) {
-					try {
-						t.out.writeObject(message);
-					}
-					catch(Exception e) {}
-				}
-			});
-
+            synchronized(clientMap) {
+                clientMap.forEach((id, t)->{
+                    if (clients.contains(t.username)) {
+                        try {
+                            t.out.writeObject(message);
+                        }
+                        catch(Exception e) {}
+                    }
+                });
+            }
 		}
+
+        public void notifyClientByID(Message message, int id) {
+            synchronized(clientMap) {
+                try {
+                    clientMap.get(id).out.writeObject(message);
+                }
+                catch (Exception e) {
+                    Log("Error notifying client " + id);
+                    e.printStackTrace();
+                }
+            }
+        }
+            
+        // Notify players of a game
+        public void notifyPlayers(Message message, CheckersGame game) {
+            if (game.playerRedID != -1) {
+                notifyClientByID(message, game.playerRedID);
+            }
+            if (game.playerBlackID != -1) {
+                notifyClientByID(message, game.playerBlackID);
+            }
+        }
 
 		private void removeClient() {
 			Log("Socket error from client: id=" + id + " (" + username + ") - closing down!");
-			clientMap.remove(id);
+            synchronized(clientMap) {
+			    clientMap.remove(id);
+            }
+
+            synchronized(games) {
+                CheckersGame activeGame = games.get(activeGameID);
+                handlePlayerError(activeGame);
+            }
 		}
+
+        private void handlePlayerError(CheckersGame game) {
+            synchronized(games) {
+                Log(username + " was in game id=" + game.gameID + " before triggering an error.");
+
+                if (game.hasBothPlayers()) {
+                    Log("Restarting game id=" + game.gameID);
+                    game.restart();
+                }
+
+                if (game.playerBlackID == id) {
+                    game.playerBlackID = -1;
+                }
+                else if (game.playerRedID == id) {
+                    game.playerRedID = -1;
+                }
+                Log("Removed " + username + " from game id=" + game.gameID);
+            }
+        }
 
         private void login() {
 			while (true) {
@@ -127,6 +187,29 @@ public class Server {
 			notifyClients(joinMsg);
         }
 
+        private CheckersGame getAvailableGame() {
+            CheckersGame res = null;
+
+            synchronized(games) {
+                for (CheckersGame game : games.values()) {
+                    if (game.hasWaitingPlayer()) {
+                        return game;
+                    }
+                    if (res == null && game.hasNoPlayers()) {
+                        res = game;
+                    }
+                }
+
+                if (res != null) {
+                    return res;
+                }
+
+                res = new CheckersGame(gamesLazyGUID++);
+                games.put(res.gameID, res);
+                return res;
+            }
+        }
+
         private void handleRecvMessage() throws java.io.IOException, java.lang.ClassNotFoundException {
             Message message = (Message)in.readObject();
 
@@ -150,13 +233,65 @@ public class Server {
                 Log(prefix + " requested active users");
                 Message usersResp = new Message("", Message.MessageType.RespActiveUsers);
 
-                clientMap.forEach((id, client)->{
-                    if (client.username != null) {
-                        usersResp.list.add(client.username);
-                    }
-                });
-
+                synchronized(clientMap) {
+                    clientMap.forEach((id, client)->{
+                        if (client.username != null) {
+                            usersResp.list.add(client.username);
+                        }
+                    });
+                }
                 out.writeObject(usersResp);
+            }
+            else if (message.type == Message.MessageType.FindGameReq) {
+                Log("User " + username + " requested to find a game.");
+
+                CheckersGame game = getAvailableGame();
+                    
+                if (game == null) {
+                    Log("Get available game failed!");
+                    return;
+                }
+
+                Integer id = game.gameID;
+
+                Log("Sending " + username + " game id=" + id);
+                Message gameMsg = new Message(id.toString(), Message.MessageType.FindGameResponse);
+
+                out.writeObject(gameMsg);
+            }
+            else if (message.type == Message.MessageType.JoinGameReq) {
+                int bodyID = Integer.parseInt(message.body);
+                Log("User " + username + " requested to join game id=" + bodyID);
+                
+                synchronized(games) {
+                    if (games.containsKey(bodyID)) {
+                        CheckersGame game = games.get(bodyID);
+
+                        try {
+                            boolean joinedAsRed = game.joinGame(id);
+
+                            if (joinedAsRed) {
+                                Log(username + " joined game id=" + game.gameID + " as red.");
+                            }
+                            else {
+                                Log(username + " joined game id=" + game.gameID + " as black.");
+                            }
+
+                            activeGameID = game.gameID;
+
+                            notifyClientByID(new Message("You joined a game.", Message.MessageType.JoinGameOK), id);
+                            Message notifyPlayers = new Message(username + " joined the game.", Message.MessageType.PlayerJoinedGameNoti);
+
+                            notifyPlayers(notifyPlayers, game);
+                        }
+                        catch(Exception e) {
+                            Log(username + " tried to join full game id=" + game.gameID);
+                        }
+                    }
+                    else {
+                        Log("Invalid game ID request? : " + username + " " + bodyID);
+                    }
+                }
             }
             else {
                 Log("Unhandled message from client? id=" + id + "(" + username + ")");

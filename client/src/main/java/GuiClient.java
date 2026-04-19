@@ -116,16 +116,13 @@ public class GuiClient extends Application {
 		rulesBox.setPadding(new Insets(25));
 		rulesBox.setStyle("-fx-background-radius: 5; -fx-border-color: #000000; -fx-border-radius: 5");
 
-		title = new Label();
-		title.setText("Finding your opponent...Press start to begin the game...");
-		title.setFont(Font.font("Times New Roman", 15));
-
-		continueButton = new Button("Start the game");
+		continueButton = new Button("Find a game");
 		continueButton.setOnAction(e->{
-			primaryStage.setScene(sceneMap.get("game"));
+            Message findGame = new Message("", Message.MessageType.FindGameReq);
+            clientConnection.send(findGame);
 		});
 
-		scene2v = new VBox(30, rulesBox, title, continueButton);
+		scene2v = new VBox(30, rulesBox, continueButton);
 		scene2v.setStyle("-fx-font-size: 15 ; -fx-font-family: Times New Roman; -fx-background-color: #87ceeb");
 		scene2v.setPadding(new Insets(25));
 		s2bp = new BorderPane();
@@ -236,8 +233,19 @@ public class GuiClient extends Application {
 				clientUsername = message.body;
 			});
 		}
+        else if (message.type == Message.MessageType.FindGameResponse) {
+            Platform.runLater(() ->{
+                System.out.println("Found available game id=" + message.body + "; sending join request.");
+                clientConnection.send(new Message(message.body, Message.MessageType.JoinGameReq));
+            });
+        }
+        else if (message.type == Message.MessageType.JoinGameOK) {
+            Platform.runLater(() -> {
+                primaryStage.setScene(sceneMap.get("game"));
+            });
+        }
 		else {
-			System.out.println("Unhandled message received: " + message.type + message.body);
+			System.out.println("Unhandled message received: type: " + message.type + ", body: " + message.body);
 		}
 	}
 
