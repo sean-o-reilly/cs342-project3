@@ -26,6 +26,10 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Label;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Font;
+import javafx.scene.paint.Color;
+import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Circle;
+
 
 public class GuiClient extends Application {
 
@@ -133,27 +137,113 @@ public class GuiClient extends Application {
 	}
 
 	private Scene createScene3Game(){
-		Button continueButton;
-		VBox scene3v;
+		Button continueButton, sendButton;
+		VBox scene3v, sendMessage;
 		BorderPane s3bp;
-		Label title;
+		GridPane boardGrid = new GridPane();
+		Label title, titleMessage;
+		TextField tfInputMessage;
 
 		title = new Label();
 		title.setText("Checkers!");
-		title.setFont(Font.font("Times New Roman", FontWeight.BOLD, 30));
+		title.setFont(Font.font("Times New Roman", FontWeight.BOLD, 35));
+		
+		int[][] piece= new int[8][8];
+
+		//red pieces
+		for (int row = 0; row < 3; row++) {
+                for (int col = 0; col < 8; col++) {
+                    if ((row + col) % 2 == 1) {
+                        piece[row][col] = 1;
+                    }
+                }
+            }
+
+		//black pieces
+		for (int row = 5; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				if ((row + col) % 2 == 1) {
+					piece[row][col] = 2;
+				}
+			}
+		}
+
+		//cells
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				StackPane cell = new StackPane();
+				cell.setPrefSize(50,50);
+			
+				if((row+col)%2 ==1){
+					cell.setStyle("-fx-background-color: #afb4b4");
+				}
+				else{
+					cell.setStyle("-fx-background-color: #d1d4d4");
+				}
+
+				if(piece[row][col] !=0 && (row+col)%2 ==1){
+					Circle circle = new Circle(20);
+					if(piece[row][col] == 1){
+						circle.setFill(Color.RED);
+					}
+					else{
+						circle.setFill(Color.BLACK);
+					}
+					cell.getChildren().add(circle);
+				}
+				boardGrid.add(cell, col, row);
+			}
+		}
+
+		titleMessage = new Label();
+		titleMessage.setText("Message Chat!");
+		titleMessage.setFont(Font.font("Times New Roman", FontWeight.BOLD, 20));
+	
+		
+		VBox chat = new VBox(10);
+		chat.setPadding(new Insets(10));
+
+		ScrollPane scroll = new ScrollPane(chat);
+		scroll.setPrefHeight(400);
+		scroll.setFitToWidth(true);
+
+		tfInputMessage = new TextField();
+		tfInputMessage.setPromptText("Write a message to send");
+		tfInputMessage.setFont(Font.font("Times New Roman", 20));
+
+		sendButton = new Button("Send");
+		sendButton.setOnAction(e->{
+			String temp = tfInputMessage.getText();
+			Label clientMessage = new Label("You: " + temp);
+			clientMessage.setFont(Font.font("Times New Roman", 15));
+			clientMessage.setStyle("-fx-background-color: #add8e6; -fx-border-color: #000000; -fx-padding: 5;");
+			chat.getChildren().add(clientMessage);
+			tfInputMessage.clear();
+
+		});
+
+		sendMessage = new VBox(10, titleMessage, scroll, tfInputMessage, sendButton);
+		sendMessage.setPadding(new Insets(20));
+		sendMessage.setStyle("-fx-background-color: #add8e6; -fx-background-radius: 5; -fx-border-color: #000000; -fx-border-radius: 5");
+		sendMessage.setPrefHeight(250);
+	////////////////////////////////////////////
+
 
 		continueButton = new Button("Press when game is over.");
 		continueButton.setOnAction(e->{
 			primaryStage.setScene(sceneMap.get("gameEnd"));
 		});
 
-		scene3v = new VBox(30, title, continueButton);
+		scene3v = new VBox(30, title, boardGrid, sendMessage, continueButton);
 		scene3v.setStyle("-fx-font-size: 15 ; -fx-font-family: Times New Roman; -fx-background-color: #87ceeb");
 		scene3v.setPadding(new Insets(25));
+		ScrollPane s3 = new ScrollPane();
+		s3.setContent(scene3v);
+		s3.setFitToWidth(true);
 		s3bp = new BorderPane();
 		s3bp.setStyle("-fx-background-color: #add8e6");
 		s3bp.setPadding(new Insets(25));
-		s3bp.setCenter(scene3v);
+		s3bp.setCenter(s3);
 		return new Scene(s3bp, 700, 700);	
 	}
 
