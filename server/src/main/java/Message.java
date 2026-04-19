@@ -25,16 +25,30 @@ public class Message implements Serializable {
         PlayerJoinedGameNoti,
         LeaveGameReq,
         LeaveGameOK,
-        PlayerLeftGameNoti
+        PlayerLeftGameNoti,
+        GameStateNoti
     }
 
     String body = "";
     String user = "";
     ArrayList<String> list = new ArrayList<String>();
-    MessageType type;
+
+    final MessageType type;
+    final GameStateDTO gameState;
+
+    Message(MessageType type) {
+        this.type = type;
+        this.gameState = null;
+    }
 
     Message(String body, MessageType type) {
         this.body = body;
         this.type = type;
+        this.gameState = null;
+    }
+
+    Message(MessageType type, GameStateDTO state) {
+        this.type = type;
+        this.gameState = state;
     }
 }

@@ -52,6 +52,8 @@ public class GuiClient extends Application {
 	Client client;
 	Scene scene1Login, scene2Lobby, scene3Game, scene4GameEnd;
 
+    GameStateDTO gameState;
+
 	public static void main(String[] args) {
 		launch(args);
 	}
@@ -335,6 +337,16 @@ public class GuiClient extends Application {
         else if (message.type == Message.MessageType.LeaveGameOK) {
             Platform.runLater(() -> {
                 primaryStage.setScene(sceneMap.get("lobby"));
+            });
+        }
+        else if (message.type == Message.MessageType.GameStateNoti) {
+            Platform.runLater(() -> {
+                if (message.gameState == null) {
+                    System.out.println("Received null game state?");
+                }
+                else {
+                    gameState = message.gameState;
+                }
             });
         }
 		else {

@@ -6,6 +6,25 @@ public class CheckersGame {
     Board board;
     boolean redTurn = true;
     
+    GameStateDTO toStateDTO() {
+
+        GameStateDTO.Piece[][] outBoard = new GameStateDTO.Piece[8][8];
+
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Piece piece = board.getPiece(row, col);
+
+                if (piece != null) {
+                    outBoard[row][col] = new GameStateDTO.Piece(piece.isRed, piece.isKing);
+                }
+            }
+        }
+
+        GameStateDTO state = new GameStateDTO(checkWinner(), outBoard, playerBlackID, playerRedID);
+
+        return state;
+    }
+    
     boolean hasWaitingPlayer() {
         return (playerRedID == -1 && playerBlackID != -1) || (playerRedID != -1 && playerBlackID == -1);
     }
@@ -206,7 +225,7 @@ public class CheckersGame {
         return false;
     }
 
-    // 0 if no winner, else returns winner ID
+    // -1 if no winner, 0 if draw, else returns winner ID
     public int checkWinner() {
         int redPieces = board.countPieces(true);
         int blackPieces = board.countPieces(false);
@@ -217,7 +236,7 @@ public class CheckersGame {
         if (!board.hasMoves(true)) return playerBlackID;
         if (!board.hasMoves(false)) return playerRedID;
 
-        return 0;
+        return -1;
     }
 
     private boolean isValid(int r, int c) {

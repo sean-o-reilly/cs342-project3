@@ -111,11 +111,15 @@ public class Server {
 
         // Notify players of a game
         public void notifyPlayers(Message message, CheckersGame game) {
+            Message state = new Message(Message.MessageType.GameStateNoti, game.toStateDTO());
+
             if (game.playerRedID != -1) {
                 notifyClientByID(message, game.playerRedID);
+                notifyClientByID(state, game.playerRedID);
             }
             if (game.playerBlackID != -1) {
                 notifyClientByID(message, game.playerBlackID);
+                notifyClientByID(state, game.playerRedID);
             }
         }
 
@@ -251,7 +255,7 @@ public class Server {
             Log("User " + username + " requested to find a game.");
 
             CheckersGame game = getAvailableGame();
-                
+
             if (game == null) {
                 Log("Get available game failed!");
                 return;
@@ -268,7 +272,7 @@ public class Server {
         private void handleJoinGame(Message message) {
             int bodyID = Integer.parseInt(message.body);
             Log("User " + username + " requested to join game id=" + bodyID);
-            
+
             synchronized(games) {
                 if (games.containsKey(bodyID)) {
                     CheckersGame game = games.get(bodyID);
