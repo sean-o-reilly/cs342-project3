@@ -41,6 +41,9 @@ public class GuiClient extends Application {
 	HashSet<String> usernames = new HashSet<String>();
 	ListView<String> usersList = new ListView<String>();
 
+	int clickRow = -1;
+	int clickCol = -1;
+
 	// login scene
 	VBox loginSceneBox;
 	TextField t2;
@@ -53,6 +56,8 @@ public class GuiClient extends Application {
 	Scene scene1Login, scene2Lobby, scene3Game, scene4GameEnd;
 
     GameStateDTO gameState;
+	GridPane boardGrid = new GridPane();
+	VBox chat = new VBox(10);
 
 	public static void main(String[] args) {
 		launch(args);
@@ -142,7 +147,7 @@ public class GuiClient extends Application {
 		Button continueButton, sendButton;
 		VBox scene3v, sendMessage;
 		BorderPane s3bp;
-		GridPane boardGrid = new GridPane();
+		boardGrid = new GridPane();
 		Label title, titleMessage;
 		TextField tfInputMessage;
 
@@ -201,7 +206,7 @@ public class GuiClient extends Application {
 		titleMessage.setText("Message Chat!");
 		titleMessage.setFont(Font.font("Times New Roman", FontWeight.BOLD, 20));
 	
-		VBox chat = new VBox(10);
+		chat = new VBox(10);
 		chat.setPadding(new Insets(10));
 
 		ScrollPane scroll = new ScrollPane(chat);
@@ -245,6 +250,53 @@ public class GuiClient extends Application {
 		s3bp.setCenter(s3);
 
 		return new Scene(s3bp, 700, 700);	
+	}
+
+	private void drawState(){
+		boardGrid.getChildren().clear();
+
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				StackPane cell = new StackPane();
+				cell.setPrefSize(50,50);
+			
+				if((row+col)%2 ==1){
+					cell.setStyle("-fx-background-color: #afb4b4");
+				}
+				else{
+					cell.setStyle("-fx-background-color: #d1d4d4");
+				}
+
+				if(gameState != null && gameState.board[row][col]!= null){
+					GameStateDTO.Piece piece = gameState.board[row][col];
+					Circle circle = new Circle(20);
+					if(piece.isRed){
+						circle.setFill(Color.RED);
+					}
+					else{
+						circle.setFill(Color.BLACK);
+					}
+					cell.getChildren().add(circle);
+				}
+				final int r  = row;
+				final int c = col;
+				cell.setOnMouseClicked(e->{
+					if(clickRow == -1){
+					clickRow = r;
+					clickCol = c;
+					}
+					else{
+						Message move = new Message(Message.MessageType.MovingPieces, clickRow, clickCol, r, c);
+						clientConnection.send(move);
+						clickRow = -1;
+						clickCol = -1;
+					}
+				});
+			
+				boardGrid.add(cell, col, row);
+			}
+		}
+		
 	}
 
 	private Scene createScene4GameEnd(){
@@ -346,6 +398,7 @@ public class GuiClient extends Application {
                 }
                 else {
                     gameState = message.gameState;
+					drawState();
                 }
             });
         }

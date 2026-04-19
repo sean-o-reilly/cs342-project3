@@ -26,12 +26,18 @@ public class Message implements Serializable {
         LeaveGameReq,
         LeaveGameOK,
         PlayerLeftGameNoti,
-        GameStateNoti
+        GameStateNoti,
+        MovingPieces
     }
 
     String body = "";
     String user = "";
     ArrayList<String> list = new ArrayList<String>();
+
+    int rowStart = -1;
+    int rowEnd = -1;
+    int colStart = -1;
+    int colEnd = -1;
 
     final MessageType type;
     final GameStateDTO gameState;
@@ -50,5 +56,14 @@ public class Message implements Serializable {
     Message(MessageType type, GameStateDTO state) {
         this.type = type;
         this.gameState = state;
+    }
+
+    Message(MessageType type, int rowStart, int colStart, int rowEnd, int colEnd){
+        this.type = type;
+        this.gameState = null;
+        this.rowStart = rowStart;
+        this.colStart = colStart;
+        this.rowEnd = rowEnd;
+        this.colEnd = colEnd;
     }
 }
