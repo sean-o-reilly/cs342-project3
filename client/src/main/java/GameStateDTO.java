@@ -27,5 +27,3 @@ class GameStateDTO implements Serializable {
         }
     }
 }
-
-
