@@ -83,7 +83,6 @@ public class Server {
             }
 		}
 
-		// Note that this function is simple but not efficient
 		public void notifySomeClients(Message message, ArrayList<String> clients) {
             synchronized(clientMap) {
                 clientMap.forEach((id, t)->{
@@ -315,7 +314,7 @@ public class Server {
 
                         activeGameID = game.gameID;
 
-                        notifyClientByID(new Message("You joined a game.", Message.MessageType.JoinGameOK), id);
+                        notifyClientByID(new Message(String.valueOf(id), Message.MessageType.JoinGameOK), id);
                         Message notifyPlayers = new Message(username + " joined the game.", Message.MessageType.PlayerJoinedGameNoti);
 
                         notifyPlayers(notifyPlayers, game);
