@@ -27,7 +27,10 @@ public class Message implements Serializable {
         LeaveGameOK,
         PlayerLeftGameNoti,
         GameStateNoti,
-        MovingPieces
+        MovePieceReq,
+        MovePieceNoti,
+        GameChatTextMessage,
+        GameChatNoti
     }
 
     String body = "";

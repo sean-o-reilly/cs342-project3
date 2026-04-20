@@ -219,11 +219,8 @@ public class GuiClient extends Application {
 
 		sendButton = new Button("Send");
 		sendButton.setOnAction(e->{
-			String temp = tfInputMessage.getText();
-			Label clientMessage = new Label("You: " + temp);
-			clientMessage.setFont(Font.font("Times New Roman", 15));
-			clientMessage.setStyle("-fx-background-color: #add8e6; -fx-border-color: #000000; -fx-padding: 5;");
-			chat.getChildren().add(clientMessage);
+            clientConnection.send(new Message(tfInputMessage.getText(), Message.MessageType.GameChatTextMessage));
+
 			tfInputMessage.clear();
 		});
 
@@ -278,15 +275,17 @@ public class GuiClient extends Application {
 					}
 					cell.getChildren().add(circle);
 				}
+
 				final int r  = row;
 				final int c = col;
+
 				cell.setOnMouseClicked(e->{
 					if(clickRow == -1){
 					clickRow = r;
 					clickCol = c;
 					}
 					else{
-						Message move = new Message(Message.MessageType.MovingPieces, clickRow, clickCol, r, c);
+						Message move = new Message(Message.MessageType.MovePieceReq, clickRow, clickCol, r, c);
 						clientConnection.send(move);
 						clickRow = -1;
 						clickCol = -1;
@@ -296,7 +295,6 @@ public class GuiClient extends Application {
 				boardGrid.add(cell, col, row);
 			}
 		}
-		
 	}
 
 	private Scene createScene4GameEnd(){
@@ -400,6 +398,15 @@ public class GuiClient extends Application {
                     gameState = message.gameState;
 					drawState();
                 }
+            });
+        }
+        else if (message.type == Message.MessageType.GameChatNoti) {
+            Platform.runLater(() -> {
+                Label clientMessage = new Label(message.body);
+                clientMessage.setFont(Font.font("Times New Roman", 15));
+                clientMessage.setStyle("-fx-background-color: #add8e6; -fx-border-color: #000000; -fx-padding: 5;");
+
+                chat.getChildren().add(clientMessage);
             });
         }
 		else {

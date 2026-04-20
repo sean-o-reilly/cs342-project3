@@ -76,7 +76,6 @@ public class Server {
             synchronized(clientMap) {
                 clientMap.forEach((id, t)->{
                     try {
-                        //t.out.reset();///////////
                         t.out.writeObject(message);
                     }
                     catch(Exception e) {}
@@ -90,7 +89,6 @@ public class Server {
                 clientMap.forEach((id, t)->{
                     if (clients.contains(t.username)) {
                         try {
-                            //t.out.reset();//////////
                             t.out.writeObject(message);
                         }
                         catch(Exception e) {}
@@ -110,7 +108,6 @@ public class Server {
                 }
             }
         }
-
 
         // Notify players of a game
         public void notifyPlayers(Message message, CheckersGame game) {
@@ -180,7 +177,6 @@ public class Server {
 							username = message.body;
 
 							Message loginOK = new Message(username, Message.MessageType.LoginOK);
-                            //out.reset();//////////
 							out.writeObject(loginOK);
 
 							break;
@@ -188,7 +184,6 @@ public class Server {
 						Log(prefix + "Invalid username! : " + message.body);
 
 						Message loginBad = new Message("", Message.MessageType.LoginFailed);
-                        //out.reset();//////////
 						out.writeObject(loginBad);
 					}
 					else {
@@ -253,7 +248,6 @@ public class Server {
                 });
             }
 
-            //out.reset();//////////
             out.writeObject(usersResp);
         }
 
@@ -263,7 +257,7 @@ public class Server {
             CheckersGame game = getAvailableGame();
 
             if (game == null) {
-                Log("Get available game failed!");
+                Log("Failed to find game during find game request.");
                 return;
             }
 
@@ -272,33 +266,30 @@ public class Server {
             Log("Sending " + username + " game id=" + id);
             Message gameMsg = new Message(id.toString(), Message.MessageType.FindGameResponse);
 
-            //out.reset();//////////
             out.writeObject(gameMsg);
         }
 
-        private void handleMovingPieces(Message message) throws IOException {
-            synchronized(games){
+        private void handleMoveReq(Message message) throws IOException {
+            synchronized(games) {
                 CheckersGame game = games.get(activeGameID);
 
-                if(game == null){
-                    Log("Get available game failed!");
+                if (game == null) {
+                    Log("Failed to find game during move request?");
                     return;
                 }
 
                 boolean madeValidMove = game.move(message.rowStart, message.colStart, message.rowEnd, message.colEnd);
 
-                if(madeValidMove){
-                    Log(username + " made a move.");
-                    Message notifyPlayers = new Message(username + " made a move.", Message.MessageType.PlayerJoinedGameNoti);
+                if (madeValidMove) {
+                    Log(username + " made a valid move. In game id=" + game.gameID);
 
+                    Message notifyPlayers = new Message(username + " made a move.", Message.MessageType.MovePieceNoti);
                     notifyPlayers(notifyPlayers, game);
                 }
-
-                else{
-                    Log(username + " made invalid move");
+                else {
+                    Log(username + " made an invalid move in game id=" + game.gameID);
                 }
             }
-
         }
 
         private void handleJoinGame(Message message) {
@@ -350,8 +341,22 @@ public class Server {
             activeGameID = -1;
 
             Message resp = new Message("", Message.MessageType.LeaveGameOK);
-            //out.reset();//////////
             out.writeObject(resp);
+        }
+
+        private void handleGameChatMessage(Message message) throws IOException {
+            synchronized(games) {
+                CheckersGame game = games.get(activeGameID);
+                Log("gameid=" + activeGameID);
+
+                if (game != null) {
+                    Log(username + " sent a game chat message to game id=" + activeGameID);
+                    notifyPlayers(new Message(username + ": " + message.body, Message.MessageType.GameChatNoti), game);
+                }
+                else {
+                    Log(username + " failed to find game to send chat message to? game id=" + activeGameID);
+                }
+            }
         }
 
         private void handleRecvMessage() throws java.io.IOException, java.lang.ClassNotFoundException {
@@ -375,8 +380,11 @@ public class Server {
             else if (message.type == Message.MessageType.LeaveGameReq) {
                 handleLeaveGame(message);
             }
-            else if(message.type == Message.MessageType.MovingPieces) {
-                handleMovingPieces(message);
+            else if (message.type == Message.MessageType.MovePieceReq) {
+                handleMoveReq(message);
+            }
+            else if (message.type == Message.MessageType.GameChatTextMessage) {
+                handleGameChatMessage(message);
             }
             else {
                 Log("Unhandled message from client? id=" + id + "(" + username + ") " + " type: " + message.type);
