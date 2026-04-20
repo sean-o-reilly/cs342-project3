@@ -76,7 +76,6 @@ public class Server {
             synchronized(clientMap) {
                 clientMap.forEach((id, t)->{
                     try {
-                        //t.out.reset();///////////
                         t.out.writeObject(message);
                     }
                     catch(Exception e) {}
@@ -90,7 +89,6 @@ public class Server {
                 clientMap.forEach((id, t)->{
                     if (clients.contains(t.username)) {
                         try {
-                            //t.out.reset();//////////
                             t.out.writeObject(message);
                         }
                         catch(Exception e) {}
@@ -110,7 +108,6 @@ public class Server {
                 }
             }
         }
-
 
         // Notify players of a game
         public void notifyPlayers(Message message, CheckersGame game) {
@@ -180,7 +177,6 @@ public class Server {
 							username = message.body;
 
 							Message loginOK = new Message(username, Message.MessageType.LoginOK);
-                            //out.reset();//////////
 							out.writeObject(loginOK);
 
 							break;
@@ -188,7 +184,6 @@ public class Server {
 						Log(prefix + "Invalid username! : " + message.body);
 
 						Message loginBad = new Message("", Message.MessageType.LoginFailed);
-                        //out.reset();//////////
 						out.writeObject(loginBad);
 					}
 					else {
@@ -231,13 +226,13 @@ public class Server {
         }
 
         private void handleGlobalMessage(Message message) {
-            Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
+            Message chatNotiMsg = new Message(username + " : " + message.body, Message.MessageType.ChatNoti);
             chatNotiMsg.user = username;
             notifyClients(chatNotiMsg);
         }
 
         private void handleDM(Message message) {
-            Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
+            Message chatNotiMsg = new Message(username + " : " + message.body, Message.MessageType.ChatNoti);
             chatNotiMsg.user = username;
             notifySomeClients(chatNotiMsg, message.list);
         }
@@ -253,7 +248,6 @@ public class Server {
                 });
             }
 
-            //out.reset();//////////
             out.writeObject(usersResp);
         }
 
@@ -272,7 +266,6 @@ public class Server {
             Log("Sending " + username + " game id=" + id);
             Message gameMsg = new Message(id.toString(), Message.MessageType.FindGameResponse);
 
-            //out.reset();//////////
             out.writeObject(gameMsg);
         }
 
@@ -350,7 +343,6 @@ public class Server {
             activeGameID = -1;
 
             Message resp = new Message("", Message.MessageType.LeaveGameOK);
-            //out.reset();//////////
             out.writeObject(resp);
         }
 

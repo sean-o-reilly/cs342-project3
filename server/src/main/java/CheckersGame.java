@@ -227,6 +227,7 @@ public class CheckersGame {
 
     // -1 if no winner, 0 if draw, else returns winner ID
     public int checkWinner() {
+        //return playerBlackID;//temp to check win/lose
         int redPieces = board.countPieces(true);
         int blackPieces = board.countPieces(false);
 
@@ -238,6 +239,7 @@ public class CheckersGame {
 
         return -1;
     }
+
 
     private boolean isValid(int r, int c) {
         return r >= 0 && r < 8 && c >= 0 && c < 8;
