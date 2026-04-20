@@ -4,7 +4,7 @@ public class CheckersGame {
     public int playerRedID = -1;
 
     Board board;
-    boolean redTurn = true;
+    boolean redTurn = false;
     
     GameStateDTO toStateDTO() {
 
@@ -190,13 +190,17 @@ public class CheckersGame {
         this.gameID = gameID;
     }
     
-    // Returns false if invalid move
-    public boolean move(int fromRow, int fromCol, int toRow, int toCol) {
+    public String move(int fromRow, int fromCol, int toRow, int toCol) {
         Piece piece = board.getPiece(fromRow, fromCol);
 
-        if (piece == null) return false;
+        if (piece == null) {
+            return new String("Invalid piece.");
+        }
 
-        if (piece.isRed != redTurn) return false;
+        if (piece.isRed != redTurn) {
+            String error = redTurn ? new String("It's red's turn.") : new String("It's black's turn.");
+            return error;
+        }
 
         int rowDiff = toRow - fromRow;
         int colDiff = Math.abs(toCol - fromCol);
@@ -204,7 +208,7 @@ public class CheckersGame {
         if (Math.abs(rowDiff) == 1 && colDiff == 1) {
             board.movePiece(fromRow, fromCol, toRow, toCol);
             redTurn = !redTurn;
-            return true;
+            return null;
         }
 
         // Capture move
@@ -218,11 +222,11 @@ public class CheckersGame {
                 board.movePiece(fromRow, fromCol, toRow, toCol);
                 board.grid[midRow][midCol] = null;
                 redTurn = !redTurn;
-                return true;
+                return null;
             }
         }
 
-        return false;
+        return new String("Invalid move position.");
     }
 
     // -1 if no winner, 0 if draw, else returns winner ID

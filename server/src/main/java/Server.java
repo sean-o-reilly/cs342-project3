@@ -278,9 +278,9 @@ public class Server {
                     return;
                 }
 
-                boolean madeValidMove = game.move(message.rowStart, message.colStart, message.rowEnd, message.colEnd);
+                String error = game.move(message.rowStart, message.colStart, message.rowEnd, message.colEnd);
 
-                if (madeValidMove) {
+                if (error == null) {
                     Log(username + " made a valid move. In game id=" + game.gameID);
 
                     Message notifyPlayers = new Message(username + " made a move.", Message.MessageType.MovePieceNoti);
@@ -288,6 +288,9 @@ public class Server {
                 }
                 else {
                     Log(username + " made an invalid move in game id=" + game.gameID);
+
+                    Message invalidMove = new Message(error, Message.MessageType.MovePieceRejected);
+                    notifyClientByID(invalidMove, id);
                 }
             }
         }

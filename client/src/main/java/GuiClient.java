@@ -409,6 +409,12 @@ public class GuiClient extends Application {
                 chat.getChildren().add(clientMessage);
             });
         }
+        else if (message.type == Message.MessageType.MovePieceRejected) {
+            Platform.runLater(() -> {
+                String errorReason = message.body;
+                System.out.println("Invalid move! Reason: " + errorReason);
+            });
+        }
 		else {
 			System.out.println("Unhandled message received: type: " + message.type + ", body: " + message.body);
 		}

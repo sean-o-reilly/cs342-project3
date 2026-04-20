@@ -28,6 +28,7 @@ public class Message implements Serializable {
         PlayerLeftGameNoti,
         GameStateNoti,
         MovePieceReq,
+        MovePieceRejected,
         MovePieceNoti,
         GameChatTextMessage,
         GameChatNoti
