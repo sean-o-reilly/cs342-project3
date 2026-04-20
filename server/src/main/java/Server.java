@@ -226,13 +226,13 @@ public class Server {
         }
 
         private void handleGlobalMessage(Message message) {
-            Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
+            Message chatNotiMsg = new Message(username + " : " + message.body, Message.MessageType.ChatNoti);
             chatNotiMsg.user = username;
             notifyClients(chatNotiMsg);
         }
 
         private void handleDM(Message message) {
-            Message chatNotiMsg = new Message(username + " said: " + message.body, Message.MessageType.ChatNoti);
+            Message chatNotiMsg = new Message(username + " : " + message.body, Message.MessageType.ChatNoti);
             chatNotiMsg.user = username;
             notifySomeClients(chatNotiMsg, message.list);
         }
