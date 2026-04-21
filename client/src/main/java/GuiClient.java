@@ -47,6 +47,7 @@ public class GuiClient extends Application {
 	Label error = new Label();
 	Label turn = new Label();
 	Label opponent = new Label();
+	Label leaderBoard = new Label();
 
 	// login scene
 	VBox loginSceneBox;
@@ -388,7 +389,7 @@ public class GuiClient extends Application {
             clientConnection.send(new Message("", Message.MessageType.PlayAgainReq));
 		});
 
-		scene4v = new VBox(30, win, option, playAgain, quitButton);
+		scene4v = new VBox(30, win, leaderBoard, option, playAgain, quitButton);
 		scene4v.setStyle("-fx-font-size: 15 ; -fx-font-family: Times New Roman; -fx-background-color: #87ceeb");
 		scene4v.setPadding(new Insets(25));
 		s4bp = new BorderPane();
@@ -491,6 +492,7 @@ public class GuiClient extends Application {
 							win.setText("Black player wins!");
 							win.setFont(Font.font("Times New Roman", FontWeight.BOLD, 30));
 						}
+						clientConnection.send(new Message("", Message.MessageType.LeaderboardRequest));
 						primaryStage.setScene(sceneMap.get("gameEnd"));
 					}
 
@@ -522,6 +524,17 @@ public class GuiClient extends Application {
                 error.setText("Your opponent left the game");
 				error.setFont(Font.font("Times New Roman", 20));
                 error.setStyle("-fx-text-fill: #ff1111");
+            });
+        }
+
+		else if (message.type == Message.MessageType.LeaderboardResponse) {
+            Platform.runLater(() -> {
+                String boardLeader = "";
+				for(String i : message.list){
+					boardLeader += i + "\n";
+				}
+                leaderBoard.setText(boardLeader);
+				leaderBoard.setFont(Font.font("Times New Roman", 20));
             });
         }
 		else {
