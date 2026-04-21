@@ -36,7 +36,6 @@ public class GuiClient extends Application {
 	HashMap<String, Scene> sceneMap;
 	Client clientConnection;
 	String clientUsername;
-	String style = new String("-fx-background-color: blue;"+"-fx-font-family: 'serif';");
 
 	HashSet<String> usernames = new HashSet<String>();
 	ListView<String> usersList = new ListView<String>();
@@ -47,6 +46,7 @@ public class GuiClient extends Application {
 	Label win = new Label();
 	Label error = new Label();
 	Label turn = new Label();
+	Label opponent = new Label();
 
 	// login scene
 	VBox loginSceneBox;
@@ -137,7 +137,6 @@ public class GuiClient extends Application {
 		rule3.setFont(Font.font("Times New Roman",15));
 
 		VBox rulesBox = new VBox(30, rule, rule1, rule2, rule3);
-		rulesBox.setStyle("-fx-font-size: 15 ; -fx-font-family: Times New Roman; -fx-background-color: #87ceeb");
 		rulesBox.setPadding(new Insets(25));
 		rulesBox.setStyle("-fx-background-radius: 5; -fx-border-color: #a119b9; -fx-border-radius: 5");
 
@@ -196,8 +195,8 @@ public class GuiClient extends Application {
 		for (int row = 0; row < 8; row++) {
 			for (int col = 0; col < 8; col++) {
 				StackPane cell = new StackPane();
-				cell.setPrefSize(50,50);
-			
+				cell.setPrefSize(45,45);
+	
 				if((row+col)%2 ==1){
 					cell.setStyle("-fx-background-color: #afb4b4");
 				}
@@ -227,7 +226,7 @@ public class GuiClient extends Application {
 		chat.setPadding(new Insets(10));
 
 		ScrollPane scroll = new ScrollPane(chat);
-		scroll.setPrefHeight(400);
+		scroll.setPrefHeight(250);
 		scroll.setFitToWidth(true);
 
 		tfInputMessage = new TextField();
@@ -248,6 +247,7 @@ public class GuiClient extends Application {
 		sendMessage.setPadding(new Insets(20));
 		sendMessage.setStyle("-fx-background-color: #add8e6; -fx-background-radius: 5; -fx-border-color: #000000; -fx-border-radius: 5");
 		sendMessage.setPrefHeight(250);
+		sendMessage.setMaxWidth(300);
 
 		continueButton = new Button("Press when game is over.");
 		continueButton.setStyle("-fx-font-family: Times New Roman; -fx-text-fill: #ffffff; -fx-background-color: #a119b9");
@@ -256,8 +256,8 @@ public class GuiClient extends Application {
 			primaryStage.setScene(sceneMap.get("gameEnd"));
 		});
 
-		scene3v = new VBox(30, title, turn, error, boardGrid, sendMessage, continueButton);
-		scene3v.setStyle("-fx-font-size: 15 ; -fx-font-family: Times New Roman; -fx-background-color: #87ceeb");
+		scene3v = new VBox(20, title, turn, opponent, error, boardGrid, sendMessage, continueButton);
+		scene3v.setStyle("-fx-background-color: #87ceeb");
 		scene3v.setPadding(new Insets(25));
 
 		ScrollPane s3 = new ScrollPane();
@@ -276,21 +276,45 @@ public class GuiClient extends Application {
 
 		if(gameState.playerRedID == clientId){
 			turn.setText("You are RED piece.");
-			turn.setFont(Font.font("Times New Roman", FontWeight.BOLD, 15));
+			turn.setFont(Font.font("Times New Roman", 20));
+
+			if(gameState.blackUsername == null){
+				opponent.setText("Your opponent: waiting for opponent...");
+				opponent.setFont(Font.font("Times New Roman", 20));
+			}
+			else{
+				opponent.setText("Your opponent: " + gameState.blackUsername);
+				opponent.setFont(Font.font("Times New Roman", 20));
+
+			}
 		}
+
 		else{
 			turn.setText("You are BLACK piece.");
-			turn.setFont(Font.font("Times New Roman", FontWeight.BOLD, 15));
+			turn.setFont(Font.font("Times New Roman", 20));
+
+			if(gameState.redUsername == null){
+				opponent.setText("Your opponent: waiting for opponent...");
+				opponent.setFont(Font.font("Times New Roman", 20));
+			}
+			else{
+				opponent.setText("Your opponent: " + gameState.redUsername);
+				opponent.setFont(Font.font("Times New Roman", 20));
+			}
 		}
 
 		for (int row = 0; row < 8; row++) {
 			for (int col = 0; col < 8; col++) {
 				StackPane cell = new StackPane();
-				cell.setPrefSize(50,50);
+				cell.setPrefSize(45,45);
 				final int row_  = row;
 				final int col_ = col;
 			
-				if((row+col)%2 ==1){
+				if(row == clickRow && col == clickCol){
+					cell.setStyle("-fx-background-color: #43e61a");
+				}
+
+				else if((row+col)%2 ==1){
 					cell.setStyle("-fx-background-color: #afb4b4");
 				}
 				else{
@@ -306,19 +330,24 @@ public class GuiClient extends Application {
 					else{
 						circle.setFill(Color.BLACK);
 					}
+
+					if(piece.isKing){
+						circle.setStroke(Color.GOLD);
+						circle.setStrokeWidth(5);
+					}
 					cell.getChildren().add(circle);
 				}
 
-				final int r  = row;
-				final int c = col;
-
 				cell.setOnMouseClicked(e->{
 					if(clickRow == -1){
-					clickRow = row_;
-					clickCol = col_;
+						if(gameState.board[row_][col_] != null){
+							clickRow = row_;
+							clickCol = col_;
+							drawState();
+						}
 					}
 					else{
-						Message move = new Message(Message.MessageType.MovePieceReq, clickRow, clickCol, r, c);
+						Message move = new Message(Message.MessageType.MovePieceReq, clickRow, clickCol, row_, col_);
 						clientConnection.send(move);
 						clickRow = -1;
 						clickCol = -1;
@@ -334,7 +363,7 @@ public class GuiClient extends Application {
 		Button playAgain, quitButton;
 		VBox scene4v;
 		BorderPane s4bp;
-		Label lose, option;
+		Label option;
 
 
 		win.setFont(Font.font("Times New Roman", FontWeight.BOLD, 15));
@@ -356,7 +385,7 @@ public class GuiClient extends Application {
 		playAgain.setStyle("-fx-font-family: Times New Roman; -fx-text-fill: #ffffff; -fx-background-color: #a119b9");
 
 		playAgain.setOnAction(e->{
-			primaryStage.setScene(sceneMap.get("game"));
+            clientConnection.send(new Message("", Message.MessageType.PlayAgainReq));
 		});
 
 		scene4v = new VBox(30, win, option, playAgain, quitButton);
@@ -447,6 +476,7 @@ public class GuiClient extends Application {
                 else {
                     gameState = message.gameState;
 					error.setText("");
+					primaryStage.setScene(sceneMap.get("game"));
 					drawState();
 					if(gameState.winnerID != -1){
 						if(gameState.winnerID == gameState.playerRedID){
@@ -480,6 +510,15 @@ public class GuiClient extends Application {
             Platform.runLater(() -> {
                 String errorReason = message.body;
                 error.setText("Invalid move! Reason: " + errorReason);
+				error.setFont(Font.font("Times New Roman", 20));
+                error.setStyle("-fx-text-fill: #ff1111");
+            });
+        }
+
+		else if (message.type == Message.MessageType.PlayerLeftGameNoti) {
+            Platform.runLater(() -> {
+                String errorReason = message.body;
+                error.setText("Your opponent left the game");
 				error.setFont(Font.font("Times New Roman", 20));
                 error.setStyle("-fx-text-fill: #ff1111");
             });
