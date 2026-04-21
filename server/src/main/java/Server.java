@@ -277,7 +277,7 @@ public class Server {
                     return;
                 }
 
-                String error = game.move(message.rowStart, message.colStart, message.rowEnd, message.colEnd);
+                String error = game.move(message.rowStart, message.colStart, message.rowEnd, message.colEnd, id);
 
                 if (error == null) {
                     Log(username + " made a valid move. In game id=" + game.gameID);

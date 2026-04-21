@@ -20,7 +20,7 @@ public class CheckersGame {
             }
         }
 
-        GameStateDTO state = new GameStateDTO(checkWinner(), outBoard, playerBlackID, playerRedID);
+        GameStateDTO state = new GameStateDTO(checkWinner(), outBoard, playerRedID, playerBlackID);
 
         return state;
     }
@@ -101,7 +101,11 @@ public class CheckersGame {
             return grid[row][col];
         }
 
-        public void movePiece(int fromRow, int fromCol, int toRow, int toCol) {
+        public boolean movePiece(int fromRow, int fromCol, int toRow, int toCol) {
+            if (grid[toRow][toCol] != null) { // piece is already occupied
+                return false;
+            }
+
             grid[toRow][toCol] = grid[fromRow][fromCol];
             grid[fromRow][fromCol] = null;
 
@@ -109,6 +113,8 @@ public class CheckersGame {
             if (toRow == 0 || toRow == 7) {
                 grid[toRow][toCol].makeKing();
             }
+
+            return true;
         }
 
         public boolean hasMoves(boolean isRed) {
@@ -190,11 +196,20 @@ public class CheckersGame {
         this.gameID = gameID;
     }
     
-    public String move(int fromRow, int fromCol, int toRow, int toCol) {
+    public String move(int fromRow, int fromCol, int toRow, int toCol, int playerID) {
         Piece piece = board.getPiece(fromRow, fromCol);
 
         if (piece == null) {
             return new String("Invalid piece.");
+        }
+
+        // Validate playerID is moving their assigned color
+        if (piece.isRed && (playerID != playerRedID)) {
+            return new String("Can't move a red piece.");
+        }
+
+        if (!piece.isRed && (playerID != playerBlackID)) {
+            return new String("Can't move a black piece.");
         }
 
         if (piece.isRed != redTurn) {
@@ -202,11 +217,22 @@ public class CheckersGame {
             return error;
         }
 
+        // red non-king pieces must move positive, black non-king pieces must move negative
+        if (piece.isRed && !piece.isKing && (toRow <= fromRow)) {
+            return new String("Can't move backward.");
+        }
+        else if (!piece.isRed && !piece.isKing && (toRow >= fromRow)) {
+            return new String("Can't move backward.");
+        }
+        
         int rowDiff = toRow - fromRow;
         int colDiff = Math.abs(toCol - fromCol);
 
         if (Math.abs(rowDiff) == 1 && colDiff == 1) {
-            board.movePiece(fromRow, fromCol, toRow, toCol);
+            if (!board.movePiece(fromRow, fromCol, toRow, toCol)) {
+                return new String("Can't move a piece onto another piece.");
+            }
+
             redTurn = !redTurn;
             return null;
         }
@@ -219,7 +245,10 @@ public class CheckersGame {
             Piece captured = board.getPiece(midRow, midCol);
 
             if (captured != null && captured.isRed != piece.isRed) {
-                board.movePiece(fromRow, fromCol, toRow, toCol);
+                if(!board.movePiece(fromRow, fromCol, toRow, toCol)) {
+                    return new String("Can't move a piece onto another piece."); // jumping for capture, but landing on a piece
+                }
+
                 board.grid[midRow][midCol] = null;
                 redTurn = !redTurn;
                 return null;
