@@ -11,6 +11,13 @@ import java.util.HashMap;
 import java.io.IOException;
 import java.time.LocalDateTime;
 
+// leaderboard gson
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.List;
+
 public class Server {
 	int clientsLazyGUID = 1;
 	ServerThread server;
@@ -25,10 +32,85 @@ public class Server {
 		server.start();
 	}
 
-    private void Log(String str) {
+    private static void Log(String str) {
         System.out.println("[SERVER " + LocalDateTime.now() + "] " + str);
     }
-	
+
+	public synchronized static ArrayList<String> readLeaderboard(String filename) {
+        try {
+            Log("Reading leaderboard: " + filename);
+            Path path = Path.of(filename);
+
+            if (!Files.exists(path)) {
+                Log("No file exists!");
+                return new ArrayList<>();
+            }
+
+            String json = Files.readString(path);
+
+            Gson gson = new Gson();
+            List<String> list = gson.fromJson(
+                json,
+                new TypeToken<List<String>>(){}.getType()
+            );
+
+            return new ArrayList<>(list != null ? list : new ArrayList<>());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public static void incrementScore(String filename, String username) {
+        try {
+            Log("Incrementing " + username + "'s score");
+
+            Path path = Path.of(filename);
+
+            if (path.getParent() != null) {
+                Files.createDirectories(path.getParent());
+            }
+            if (!Files.exists(path)) {
+                Files.writeString(path, "[]");
+            }
+
+            String json = Files.readString(path);
+            Gson gson = new Gson();
+
+            List<String> list = gson.fromJson(
+                json,
+                new TypeToken<List<String>>(){}.getType()
+            );
+
+            ArrayList<String> leaderboard = new ArrayList<>();
+            if (list != null) leaderboard.addAll(list);
+
+            boolean found = false;
+
+            for (int i = 0; i < leaderboard.size(); i++) {
+                String[] parts = leaderboard.get(i).split(":");
+
+                if (parts.length == 2 && parts[0].equals(username)) {
+                    int score = Integer.parseInt(parts[1]);
+                    score++; // increment
+                    leaderboard.set(i, username + ":" + score);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                leaderboard.add(username + ":1");
+            }
+
+            Files.writeString(path, gson.toJson(leaderboard));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 	public class ServerThread extends Thread {
 		public void run() {
 			try (ServerSocket mysocket = new ServerSocket(5555);) {
@@ -140,6 +222,15 @@ public class Server {
 
             if (gameState.winnerID > 0) {
                 Log("User id=" + gameState.winnerID + " won in game " + game.gameID);
+                synchronized(clientMap) {
+                    ClientThread c = clientMap.get(gameState.winnerID);
+                    if (c == null) {
+                        Log("User logged out before score could update?") ;
+                    }
+                    else {
+                        incrementScore("leaderboard.json", c.username);
+                    }
+                }
                 game.restart();
             }
             else if (gameState.winnerID == 0) {
@@ -436,6 +527,15 @@ public class Server {
             }
         }
 
+        private void handleLeaderboardReq(Message message) {
+            Log("Handling leaderboard request from client id=" + id);
+
+            Message resp = new Message(Message.MessageType.LeaderboardResponse);
+            resp.list = readLeaderboard("leaderboard.json");
+            
+            notifyClientByID(resp, id);
+        }
+
         private void handleRecvMessage() throws java.io.IOException, java.lang.ClassNotFoundException {
             Message message = (Message)in.readObject();
 
@@ -465,6 +565,9 @@ public class Server {
             }
             else if (message.type == Message.MessageType.PlayAgainReq) {
                 handlePlayAgainReq(message);
+            }
+            else if (message.type == Message.MessageType.LeaderboardRequest) {
+                handleLeaderboardReq(message);
             }
             else {
                 Log("Unhandled message from client? id=" + id + "(" + username + ") " + " type: " + message.type);
