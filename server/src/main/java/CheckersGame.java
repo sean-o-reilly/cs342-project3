@@ -137,7 +137,7 @@ public class CheckersGame {
                     Piece p = grid[row][col];
 
                     if (p != null && p.isRed == isRed) {
-                        if (canMove(row, col)) {
+                        if (canMove(row, col) > 0) {
                             return true;
                         }
                     }
@@ -161,21 +161,12 @@ public class CheckersGame {
             return count;
         }
 
-        private boolean canMove(int row, int col) {
+        // 0 for no move, 1 for normal move, 2 for jump move
+        public int canMove(int row, int col) {
             Piece p = grid[row][col];
             int dir = p.isRed ? 1 : -1;
 
-            // normal moves
             int[] cols = {-1, 1};
-
-            for (int c : cols) {
-                int newRow = row + dir;
-                int newCol = col + c;
-
-                if (isValid(newRow, newCol) && grid[newRow][newCol] == null) {
-                    return true;
-                }
-            }
 
             // capture moves
             for (int c : cols) {
@@ -188,11 +179,21 @@ public class CheckersGame {
                     grid[jumpRow][jumpCol] == null &&
                     grid[midRow][midCol] != null &&
                     grid[midRow][midCol].isRed != p.isRed) {
-                    return true;
+                    return 2;
                 }
             }
 
-            return false;
+            // normal moves
+            for (int c : cols) {
+                int newRow = row + dir;
+                int newCol = col + c;
+
+                if (isValid(newRow, newCol) && grid[newRow][newCol] == null) {
+                    return 1;
+                }
+            }
+
+            return 0;
         }
     }
     
@@ -263,8 +264,12 @@ public class CheckersGame {
                     return new String("Can't move a piece onto another piece."); // jumping for capture, but landing on a piece
                 }
 
-                board.grid[midRow][midCol] = null;
-                redTurn = !redTurn;
+                board.grid[midRow][midCol] = null; // destroy captured piece
+                
+                if (board.canMove(toRow, toCol) != 2) { // only switch turns if no other jump presents itself:winner:
+                    redTurn = !redTurn;
+                }
+
                 return null;
             }
         }
