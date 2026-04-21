@@ -32,7 +32,9 @@ public class Message implements Serializable {
         MovePieceNoti,
         GameChatTextMessage,
         GameChatNoti,
-        PlayAgainReq
+        PlayAgainReq,
+        LeaderboardRequest,
+        LeaderboardResponse
     }
 
     String body = "";
