@@ -1,5 +1,5 @@
 public class CheckersGame {
-    public int gameID;
+    final public int gameID;
     public int playerBlackID = -1;
     public int playerRedID = -1;
 
@@ -54,6 +54,7 @@ public class CheckersGame {
     // reset the board, leave other state as is
     public void restart() {
         board = new Board();
+        redTurn = false;
     }
     
     public class Piece {

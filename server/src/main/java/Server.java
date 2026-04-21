@@ -117,15 +117,17 @@ public class Server {
             String redUser = null;
             String blackUser = null;
 
-            ClientThread red = clientMap.get(game.playerRedID);
-            ClientThread black = clientMap.get(game.playerBlackID);
+            synchronized(clientMap) {
+                ClientThread red = clientMap.get(game.playerRedID);
+                ClientThread black = clientMap.get(game.playerBlackID);
 
-            if (red != null) {
-                redUser = red.username;
-            }
+                if (red != null) {
+                    redUser = red.username;
+                }
 
-            if (black != null) {
-                blackUser = black.username;
+                if (black != null) {
+                    blackUser = black.username;
+                }
             }
 
             GameStateDTO gameState = game.toStateDTO(redUser, blackUser);
@@ -391,6 +393,19 @@ public class Server {
             }
         }
 
+        private void handlePlayAgainReq(Message message) {
+            Log("Received play again request from client id=" + id + " for game " + activeGameID);
+            synchronized(games) {
+                CheckersGame game = games.get(activeGameID);
+                if (game == null) {
+                    Log("Failed to handle play again reqeuest for game id=" + activeGameID);
+                    return;
+                }
+
+                notifyPlayers(new Message("Restarting your game.", Message.MessageType.GameStateNoti), game);
+            }
+        }
+
         private void handleRecvMessage() throws java.io.IOException, java.lang.ClassNotFoundException {
             Message message = (Message)in.readObject();
 
@@ -417,6 +432,9 @@ public class Server {
             }
             else if (message.type == Message.MessageType.GameChatTextMessage) {
                 handleGameChatMessage(message);
+            }
+            else if (message.type == Message.MessageType.PlayAgainReq) {
+                handlePlayAgainReq(message);
             }
             else {
                 Log("Unhandled message from client? id=" + id + "(" + username + ") " + " type: " + message.type);
