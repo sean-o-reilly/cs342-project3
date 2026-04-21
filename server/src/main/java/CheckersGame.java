@@ -6,7 +6,7 @@ public class CheckersGame {
     Board board;
     boolean redTurn = false;
     
-    GameStateDTO toStateDTO() {
+    GameStateDTO toStateDTO(String redUsername, String blackUsername) {
 
         GameStateDTO.Piece[][] outBoard = new GameStateDTO.Piece[8][8];
 
@@ -20,7 +20,7 @@ public class CheckersGame {
             }
         }
 
-        GameStateDTO state = new GameStateDTO(checkWinner(), outBoard, playerRedID, playerBlackID);
+        GameStateDTO state = new GameStateDTO(checkWinner(), outBoard, playerRedID, playerBlackID, redUsername, blackUsername);
 
         return state;
     }

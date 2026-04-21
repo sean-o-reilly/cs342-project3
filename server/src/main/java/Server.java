@@ -97,6 +97,8 @@ public class Server {
 		}
 
         public void notifyClientByID(Message message, int id) {
+            if (message == null) return;
+
             synchronized(clientMap) {
                 try {
                     clientMap.get(id).out.writeObject(message);
@@ -110,7 +112,34 @@ public class Server {
 
         // Notify players of a game
         public void notifyPlayers(Message message, CheckersGame game) {
-            Message state = new Message(Message.MessageType.GameStateNoti, game.toStateDTO());
+            Log("Notifying players of game id=" + game.gameID);
+            
+            String redUser = null;
+            String blackUser = null;
+
+            ClientThread red = clientMap.get(game.playerRedID);
+            ClientThread black = clientMap.get(game.playerBlackID);
+
+            if (red != null) {
+                redUser = red.username;
+            }
+
+            if (black != null) {
+                blackUser = black.username;
+            }
+
+            GameStateDTO gameState = game.toStateDTO(redUser, blackUser);
+            
+            Message state = new Message(Message.MessageType.GameStateNoti, gameState);
+
+            if (gameState.winnerID > 0) {
+                Log("User id=" + gameState.winnerID + " won in game " + game.gameID);
+                game.restart();
+            }
+            else if (gameState.winnerID == 0) {
+                Log("Game id=" + game.gameID + " ended in a draw.");
+                game.restart();
+            }
 
             if (game.playerRedID != -1) {
                 notifyClientByID(message, game.playerRedID);

@@ -31,7 +31,8 @@ public class Message implements Serializable {
         MovePieceRejected,
         MovePieceNoti,
         GameChatTextMessage,
-        GameChatNoti
+        GameChatNoti,
+        PlayAgainReq
     }
 
     String body = "";
