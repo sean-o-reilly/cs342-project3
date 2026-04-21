@@ -144,6 +144,7 @@ public class GuiClient extends Application {
 		rulesBox.setStyle("-fx-background-radius: 5; -fx-border-color: #a119b9; -fx-border-radius: 5");
             
         Label leaderboardLabel = new Label("Leaderboard (User : Wins)");
+		leaderboardLabel.setFont(Font.font("Times New Roman", FontWeight.BOLD, 15));
         leaderboard = new ScrollPane(leaderboardData);
 
 		continueButton = new Button("Find a game");
