@@ -174,9 +174,8 @@ public class Server {
                 Log("Restarting game id=" + game.gameID);
 
                 Message playerLeft = new Message(username + " left the game.", Message.MessageType.PlayerLeftGameNoti);
-                notifyPlayers(playerLeft, game);
-
                 game.restart();
+                notifyPlayers(playerLeft, game);
             }
 
             if (game.playerBlackID == id) {
