@@ -517,6 +517,7 @@ public class GuiClient extends Application {
 
 		else if (message.type == Message.MessageType.PlayerLeftGameNoti) {
             Platform.runLater(() -> {
+                System.out.println("Opponent left.");
                 String errorReason = message.body;
                 error.setText("Your opponent left the game");
 				error.setFont(Font.font("Times New Roman", 20));

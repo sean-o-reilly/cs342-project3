@@ -131,8 +131,12 @@ public class Server {
             }
 
             GameStateDTO gameState = game.toStateDTO(redUser, blackUser);
-            
+
             Message state = new Message(Message.MessageType.GameStateNoti, gameState);
+
+            if (state.gameState == null) {
+                Log("Failed to create game state DTO for game id=" + game.gameID);
+            }
 
             if (gameState.winnerID > 0) {
                 Log("User id=" + gameState.winnerID + " won in game " + game.gameID);
@@ -170,13 +174,11 @@ public class Server {
 		}
 
         private void handlePlayerLeft(CheckersGame game) {
-            if (game.hasBothPlayers()) {
-                Log("Restarting game id=" + game.gameID);
+            Log("Restarting game id=" + game.gameID);
 
-                Message playerLeft = new Message(username + " left the game.", Message.MessageType.PlayerLeftGameNoti);
-                game.restart();
-                notifyPlayers(playerLeft, game);
-            }
+            Message playerLeft = new Message(username + " left the game.", Message.MessageType.PlayerLeftGameNoti);
+            game.restart();
+            notifyPlayers(playerLeft, game);
 
             if (game.playerBlackID == id) {
                 game.playerBlackID = -1;
@@ -184,6 +186,33 @@ public class Server {
             else if (game.playerRedID == id) {
                 game.playerRedID = -1;
             }
+
+            String redUser = null;
+            String blackUser = null;
+
+            synchronized(clientMap) {
+                ClientThread red = clientMap.get(game.playerRedID);
+                ClientThread black = clientMap.get(game.playerBlackID);
+
+                if (red != null) {
+                    redUser = red.username;
+                }
+
+                if (black != null) {
+                    blackUser = black.username;
+                }
+            }
+
+            Message state = new Message(Message.MessageType.GameStateNoti, game.toStateDTO(redUser, blackUser));
+
+            if (game.playerRedID != -1) {
+                notifyClientByID(state, game.playerRedID);
+            }
+
+            if (game.playerBlackID != -1) {
+                notifyClientByID(state, game.playerBlackID);
+            }
+
             Log("Removed " + username + " from game id=" + game.gameID);
         }
 
@@ -400,8 +429,10 @@ public class Server {
                     Log("Failed to handle play again reqeuest for game id=" + activeGameID);
                     return;
                 }
-
-                notifyPlayers(new Message("Restarting your game.", Message.MessageType.GameStateNoti), game);
+                
+                // HACK: pass in null since usernames dont matter here
+                game.restart();
+                notifyPlayers(new Message(Message.MessageType.GameStateNoti, game.toStateDTO(null, null)), game);
             }
         }
 
