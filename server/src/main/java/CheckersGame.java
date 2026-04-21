@@ -5,6 +5,10 @@ public class CheckersGame {
 
     Board board;
     boolean redTurn = false;
+
+    // Ensure one king per team
+    boolean redHasKing = false;
+    boolean blackHasKing = false;
     
     GameStateDTO toStateDTO(String redUsername, String blackUsername) {
 
@@ -55,6 +59,8 @@ public class CheckersGame {
     public void restart() {
         board = new Board();
         redTurn = false;
+        redHasKing = false;
+        blackHasKing = false;
     }
     
     public class Piece {
@@ -112,7 +118,14 @@ public class CheckersGame {
 
             // King promotion
             if (toRow == 0 || toRow == 7) {
-                grid[toRow][toCol].makeKing();
+                if (redTurn && !redHasKing) {
+                    grid[toRow][toCol].makeKing();
+                    redHasKing = true;
+                }
+                else if (!redTurn && !blackHasKing) {
+                    grid[toRow][toCol].makeKing();
+                    blackHasKing = true;
+                }
             }
 
             return true;
