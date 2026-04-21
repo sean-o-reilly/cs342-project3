@@ -26,5 +26,5 @@ replay_pid*
 *.lst
 *.txt
 
-leaderboard.json
+*leaderboard.json
 

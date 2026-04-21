@@ -62,6 +62,9 @@ public class GuiClient extends Application {
     GameStateDTO gameState;
 	GridPane boardGrid = new GridPane();
 	VBox chat = new VBox(10);
+    
+    VBox leaderboardData = new VBox(10);
+    ScrollPane leaderboard;
 
 	public static void main(String[] args) {
 		launch(args);
@@ -139,6 +142,9 @@ public class GuiClient extends Application {
 		VBox rulesBox = new VBox(30, rule, rule1, rule2, rule3);
 		rulesBox.setPadding(new Insets(25));
 		rulesBox.setStyle("-fx-background-radius: 5; -fx-border-color: #a119b9; -fx-border-radius: 5");
+            
+        Label leaderboardLabel = new Label("Leaderboard (User : Wins)");
+        leaderboard = new ScrollPane(leaderboardData);
 
 		continueButton = new Button("Find a game");
 		continueButton.setStyle("-fx-font-family: Times New Roman; -fx-text-fill: #ffffff; -fx-background-color: #a119b9");
@@ -147,7 +153,7 @@ public class GuiClient extends Application {
             clientConnection.send(findGame);
 		});
 
-		scene2v = new VBox(30, rulesBox, continueButton);
+		scene2v = new VBox(30, rulesBox, leaderboardLabel, leaderboard, continueButton);
 		scene2v.setStyle("-fx-font-size: 15 ; -fx-font-family: Times New Roman; -fx-background-color: #87ceeb");
 		scene2v.setPadding(new Insets(25));
 		s2bp = new BorderPane();
@@ -446,7 +452,10 @@ public class GuiClient extends Application {
 		else if (message.type == Message.MessageType.LoginOK) {
 			Platform.runLater(()->{
 				primaryStage.setScene(sceneMap.get("lobby"));
+
 				clientConnection.send(new Message("", Message.MessageType.GetActiveUsers));
+                clientConnection.send(new Message("", Message.MessageType.LeaderboardRequest));
+
 				error1.setText("");
 				clientUsername = message.body;
 			});
@@ -466,6 +475,7 @@ public class GuiClient extends Application {
         else if (message.type == Message.MessageType.LeaveGameOK) {
             Platform.runLater(() -> {
                 primaryStage.setScene(sceneMap.get("lobby"));
+                clientConnection.send(new Message("", Message.MessageType.LeaderboardRequest));
             });
         }
         else if (message.type == Message.MessageType.GameStateNoti) {
@@ -522,6 +532,16 @@ public class GuiClient extends Application {
                 error.setText("Your opponent left the game");
 				error.setFont(Font.font("Times New Roman", 20));
                 error.setStyle("-fx-text-fill: #ff1111");
+            });
+        }
+        else if (message.type == Message.MessageType.LeaderboardResponse) {
+            Platform.runLater(() -> {
+                System.out.println("Recevied leaderboard data");
+                leaderboardData.getChildren().clear();
+                message.list.forEach(s -> {
+                    System.out.println(s);
+                    leaderboardData.getChildren().add(new Label(s));
+                });
             });
         }
 		else {
