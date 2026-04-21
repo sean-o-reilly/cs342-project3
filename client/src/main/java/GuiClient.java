@@ -239,7 +239,7 @@ public class GuiClient extends Application {
 		sendButton.setOnAction(e->{
 			String temp = tfInputMessage.getText().trim();
 			if(!temp.isEmpty()){
-				clientConnection.send(new Message(temp, Message.MessageType.GlobalTextMessage));
+				clientConnection.send(new Message(temp, Message.MessageType.GameChatTextMessage));
 				tfInputMessage.clear();
 			}
 		});

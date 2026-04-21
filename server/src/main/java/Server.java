@@ -225,12 +225,14 @@ public class Server {
         }
 
         private void handleGlobalMessage(Message message) {
+            Log(username + " sent a global message.");
             Message chatNotiMsg = new Message(username + " : " + message.body, Message.MessageType.ChatNoti);
             chatNotiMsg.user = username;
             notifyClients(chatNotiMsg);
         }
 
         private void handleDM(Message message) {
+            Log(username + " sent a direct message.");
             Message chatNotiMsg = new Message(username + " : " + message.body, Message.MessageType.ChatNoti);
             chatNotiMsg.user = username;
             notifySomeClients(chatNotiMsg, message.list);
@@ -349,7 +351,6 @@ public class Server {
         private void handleGameChatMessage(Message message) throws IOException {
             synchronized(games) {
                 CheckersGame game = games.get(activeGameID);
-                Log("gameid=" + activeGameID);
 
                 if (game != null) {
                     Log(username + " sent a game chat message to game id=" + activeGameID);
